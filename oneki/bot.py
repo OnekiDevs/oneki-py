@@ -7,16 +7,12 @@ from utils import translations, context, db, env, ui
 from command_tree import CommandTree
 from typing import Union
 
+from cogs import initial_extensions
+
 
 description = """
 Hola!, soy Oneki un bot multitareas y estare muy feliz en ayudarte en los que necesites :D
 """
-
-initial_extensions = (
-    "cogs.user",
-    "cogs.clubs",
-    "cogs.counting",
-)
 
 
 def _prefix_callable(bot, msg: utils.discord.Message):
