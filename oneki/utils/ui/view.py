@@ -21,6 +21,7 @@ class View(ui.View):
         super().__init__(timeout=timeout)
         
         self.ctx = context
+        self.bot = None
         self.author: Optional[discord.Member] = None
         self.msg: Optional[Union[discord.Message, discord.InteractionMessage]] = None
         self.embed: Optional[discord.Embed] = None
@@ -62,6 +63,9 @@ class View(ui.View):
         
     def _get_author(self, interaction: Optional[discord.Interaction] = None):
         return interaction.user if interaction is not None else self.ctx.author
+    
+    def _get_bot(self, interaction: Optional[discord.Interaction] = None):
+        return interaction.client if interaction is not None else self.ctx.bot
         
     async def _send_view(self, interaction: Optional[discord.Interaction] = None, **kwargs) -> discord.Message:
         if interaction is not None:
@@ -71,8 +75,9 @@ class View(ui.View):
         return await self.ctx.send(**kwargs)
         
     async def start(self, interaction: Optional[discord.Interaction] = None, *, ephemeral = False):
-        self.translations = self._get_translations(interaction)
+        self.bot = self._get_bot(interaction)
         self.author = self._get_author(interaction)
+        self.translations = self._get_translations(interaction)
         
         kwargs = await self.process_data()
         kwargs["ephemeral"] = ephemeral
