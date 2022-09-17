@@ -1,10 +1,4 @@
 {
-    "c_avatar": {
-        "embed": {
-            "author" : "Avatar of {}",
-            "footer" : "Requested by {}"
-        }
-    },
     "c_info": {
         "no_roles": "No one",
         "embed" : {
@@ -27,6 +21,12 @@
             "reason": "Reason: {}"
         },
         "no_longer_afk": "{} is no longer afk"
+    },
+    "v_avatar": {
+        "embed": {
+            "author" : "Avatar of {}",
+            "footer" : "Requested by {}"
+        }
     },
     "v_profile": {
         "embed": {
