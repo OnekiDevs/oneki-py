@@ -70,7 +70,7 @@ class View(ui.View):
     async def _send_view(self, interaction: Optional[discord.Interaction] = None, **kwargs) -> discord.Message:
         if interaction is not None:
             await interaction.response.send_message(**kwargs)
-            return await interaction.original_message()
+            return await interaction.original_response()
             
         return await self.ctx.send(**kwargs)
         
@@ -106,7 +106,7 @@ class View(ui.View):
         
         if interaction is not None:
             await interaction.response.edit_message(**kwargs) 
-            return await interaction.original_message()
+            return await interaction.original_response()
 
         return await self.msg.edit(**kwargs)
          
