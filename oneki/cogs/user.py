@@ -44,7 +44,7 @@ class MemberInfoEmbed(utils.discord.Embed):
         self.set_footer(text=translation.embed.footer.format(author.name), icon_url=author.avatar.url)
 
 
-class Avatar(ui.View):
+class Avatar(ui.ExitableView):
     name = "avatar"
     
     def __init__(self, context: Optional[Context] = None, **kwargs):
@@ -67,17 +67,18 @@ class Avatar(ui.View):
             pass
         else:
             self.clear_items()
+            self.stop()
 
-    @ui.button(label="User Avatar", style=utils.discord.ButtonStyle.primary)
+    @ui.button(label="User Avatar", emoji="🖼️", style=utils.discord.ButtonStyle.primary)
     async def avatar(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, translation):
         if self._avatar == self.member.guild_avatar:
             button.label = "Guild Avatar"
-            self._avatar = self.member.default_avatar
+            self._avatar = self.member.avatar
         else:
             button.label = "User Avatar"
             self._avatar = self.member.guild_avatar
         
-        self.update(interaction)
+        await self.update(interaction)
 
 
 class Profile(ui.ExitableView):
