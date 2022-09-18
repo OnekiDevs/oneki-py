@@ -129,7 +129,7 @@ class Profile(ui.ExitableView):
 
         await interaction.response.edit_message(embed=embed, view=self)
         
-    @ui.button(label="Information Member", emoji="📑", style=utils.discord.ButtonStyle.secondary)
+    @ui.button(label="Member Information", emoji="📑", style=utils.discord.ButtonStyle.secondary)
     @ui.change_color_when_used
     async def information(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, translation):
         embed = MemberInfoEmbed(self.member, self.author, translation)
