@@ -4,4 +4,5 @@ Pillow==9.0
 PyYAML==6.0
 
 git+https://github.com/Rapptz/discord.py@master
+git+https://github.com/Gael-devv/dexui
 aiohttp
