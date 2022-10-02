@@ -62,18 +62,18 @@ class CountingStruct:
 class GlobalStats(ui.View):
     name = "global_stats"
     
-    def __init__(self, context, **kwargs):
-        super().__init__(context, **kwargs)
-        self.generator: Optional[AsyncGenerator[DocumentSnapshot]] = None
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.generator: AsyncGenerator[DocumentSnapshot] = None
         self.embeds: list[utils.discord.Embed] = []
         self.num = 0
         
-    async def get_data(self, **_) -> Optional[list[CountingStruct]]:
-        if self.generator is None:
-            self.generator = self.ctx.db.collection("countings").order_by(
-                "current_number.num", direction=self.ctx.db.Query.DESCENDING
-            ).stream()
-
+    async def init(self, **kwargs):
+        self.generator = self.client.db.collection("countings").order_by(
+            "current_number.num", direction=self.client.db.Query.DESCENDING
+        ).stream()
+        
+    async def get_data(self) -> Optional[list[CountingStruct]]:
         try:
             _ = self.embeds[self.num]
         except IndexError:
@@ -84,7 +84,7 @@ class GlobalStats(ui.View):
                     data = doc.to_dict()
                     
                     try:
-                        guild = await self.ctx.bot.fetch_guild(int(doc.id))
+                        guild = await self.client.fetch_guild(int(doc.id))
                     except utils.discord.Forbidden:
                         continue
                     
@@ -133,7 +133,7 @@ class GlobalStats(ui.View):
                     utils.filled_bar(incorrect_rate),
                     
                     counting.current_number["num"],
-                    await self.ctx.bot.fetch_user(int(counting.current_number["by"]))
+                    await self.client.fetch_user(int(counting.current_number["by"]))
                 )
 
                 embed.add_field(name=counting.guild, value=content)
@@ -158,16 +158,16 @@ class GlobalStats(ui.View):
             self.next.disabled = True 
 
     @ui.button(label="Back", emoji="⬅️", style=utils.discord.ButtonStyle.green)
-    async def back(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, _): 
+    async def back(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button): 
         self.num -= 1
         await self.update(interaction)
     
     @ui.button(label="Exit", style=utils.discord.ButtonStyle.red)
-    async def exit(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, _):
+    async def exit(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button):
         await ui.view._StopButton.callback(button, interaction)
     
     @ui.button(label="Next", emoji="➡️", style=utils.discord.ButtonStyle.green)
-    async def next(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, _): 
+    async def next(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button): 
         self.num += 1
         await self.update(interaction)
 
@@ -254,8 +254,7 @@ class Counting(utils.Cog):
        
     @utils.commands.hybrid_command()
     async def global_stats(self, ctx: Context):
-        view = GlobalStats(ctx)
-        await view.start()
+        await GlobalStats().start(ctx)
         
     @utils.commands.hybrid_command()
     async def server_stats(self, ctx: Context):

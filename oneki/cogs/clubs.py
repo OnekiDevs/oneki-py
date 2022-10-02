@@ -200,7 +200,7 @@ class IsNsfw(ui.View):
         return self.translations.content
         
     @ui.button(label="Yes", style=utils.discord.ButtonStyle.red)
-    async def yes(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, _):
+    async def yes(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button):
         await interaction.response.edit_message(
             content=self.translations.success.format(interaction.user.name),
             view=None
@@ -210,7 +210,7 @@ class IsNsfw(ui.View):
         self.stop()
         
     @ui.button(label="No", style=utils.discord.ButtonStyle.blurple)
-    async def no(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, _):
+    async def no(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button):
         await interaction.response.edit_message(
             content=self.translations.success.format(interaction.user.name),
             view=None
@@ -270,9 +270,9 @@ class Questionnaire(ui.Modal, title="Questionnaire Club"):
 class Explorer(ui.CancellableView):
     name: str = "explorer"
     
-    def __init__(self, context = None, **kwargs):
-        super().__init__(context, **kwargs)
-        self.generator: Optional[AsyncGenerator[AsyncDocumentReference]] = None
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.generator: AsyncGenerator[AsyncDocumentReference] = None
         self.clubs: list[Club] = []
         self.num = 0
         
@@ -291,29 +291,31 @@ class Explorer(ui.CancellableView):
                 self.clubs.append(club)
                 return club
         
-    async def get_data(self, *, bot: OnekiBot, guild: utils.discord.Guild, member: utils.discord.Member) -> tuple[Optional[Club], utils.discord.Member]:
-        if self.generator is None:
-            collec_ref = bot.db.collection(f"guilds/{guild.id}/clubs")
-            self.generator = collec_ref.list_documents()
+    async def init(self, *, guild: utils.discord.Guild, member: utils.discord.Member):
+        collec_ref = self.client.db.collection(f"guilds/{guild.id}/clubs")
+        self.generator = collec_ref.list_documents()
+        self.guild = guild
+        self.member = member
         
+    async def get_data(self):
         try:
             club = self.clubs[self.num]
         except IndexError:
             try:
-                club = await self.generate_new_club(guild, member)
+                club = await self.generate_new_club(self.guild, self.member)
             except StopAsyncIteration:
                 club = None
-        
-        return (club, member)
-
-    def get_content(self, club: Optional[Club], _) -> Optional[str]: 
+                
+        return club
+    
+    def get_content(self, club: Optional[Club]) -> Optional[str]:
         if club is not None:
             return self.translations.content
         
         if self.clubs:
             return self.translations.no_more_clubs 
-
-    def get_embed(self, club: Optional[Club], _) -> Optional[utils.discord.Embed]:  
+        
+    def get_embed(self, club: Optional[Club]) -> Optional[utils.discord.Embed]:
         if club is not None:
             return club.get_embed()
 
@@ -325,7 +327,7 @@ class Explorer(ui.CancellableView):
                 timestamp=utils.utcnow()
             )
 
-    def update_components(self, club: Optional[Club], member: utils.discord.Member):         
+    def update_components(self, club: Optional[Club]):         
         if club is not None:
             self.back.disabled = False
             self.join_or_exit.disabled = False
@@ -337,14 +339,14 @@ class Explorer(ui.CancellableView):
             if (len(self.clubs) - 1) == self.num:
                 self.next.disabled = False
                 
-            if member.id == club.owner_id:
+            if self.member.id == club.owner_id:
                 self.join_or_exit.disabled = True
             
-            if member.id in club.mutes:
+            if self.member.id in club.mutes:
                 self.join_or_exit.disabled = True
             
-            self.join_or_exit.label = "Exit" if member.id in club.members else "Join"
-            self.join_or_exit.style = utils.discord.ButtonStyle.red if member.id in club.members else utils.discord.ButtonStyle.green
+            self.join_or_exit.label = "Exit" if self.member.id in club.members else "Join"
+            self.join_or_exit.style = utils.discord.ButtonStyle.red if self.member.id in club.members else utils.discord.ButtonStyle.green
         elif utils.is_empty(self.clubs):
             self.back.disabled = True
             self.join_or_exit.disabled = True
@@ -355,7 +357,7 @@ class Explorer(ui.CancellableView):
             self.join_or_exit.disabled = True
              
     @ui.button(label="Back", emoji="⬅️", style=utils.discord.ButtonStyle.grey)
-    async def back(self, interaction: utils.discord.Interaction, *_): 
+    async def back(self, interaction: utils.discord.Interaction): 
         self.num -= 1        
         self.msg = await self.update(interaction) 
         
@@ -377,7 +379,7 @@ class Explorer(ui.CancellableView):
         await club.channel.edit(overwrites=overwrites)
     
     @ui.button(label="Next", emoji="➡️", style=utils.discord.ButtonStyle.grey)
-    async def next(self, interaction: utils.discord.Interaction, *_): 
+    async def next(self, interaction: utils.discord.Interaction): 
         self.num += 1
         self.msg = await self.update(interaction) 
         
@@ -711,7 +713,6 @@ class Clubs(utils.Cog):
     @utils.app_commands.command()
     async def club_explorer(self, interaction: utils.discord.Interaction): 
         view = Explorer(
-            bot=interaction.client, 
             guild=interaction.guild, 
             member=interaction.user
         )

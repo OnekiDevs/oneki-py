@@ -47,23 +47,17 @@ class MemberInfoEmbed(utils.discord.Embed):
 class Avatar(ui.ExitableView):
     name = "avatar"
     
-    def __init__(self, context: Optional[Context] = None, **kwargs):
-        super().__init__(context, **kwargs)
-        self.member: utils.discord.Member = None
-        self._avatar: utils.discord.Asset = None
-        
-    async def get_data(self, *, member: utils.discord.Member):
-        if self._avatar is None:
-            self._avatar = member.display_avatar
-        
-        self.member = member
-        return self.member, self._avatar
+    def __init__(self, **kwargs):
+        member = kwargs.pop("member")
+        super().__init__(**kwargs)
+        self.member: utils.discord.Member = member
+        self._avatar: utils.discord.Asset = member.display_avatar
 
-    def get_embed(self, member: utils.discord.Member, avatar: utils.discord.Asset) -> Optional[utils.discord.Embed]:
-        return AvatarEmbed(member, avatar, self.author, self.translations)
+    def get_embed(self, *args) -> Optional[utils.discord.Embed]:
+        return AvatarEmbed(self.member, self._avatar, self.author, self.translations)
     
-    def update_components(self, member: utils.discord.Member, avatar: utils.discord.Asset):
-        if member.guild_avatar is not None:
+    def update_components(self, *args):
+        if self.member.guild_avatar is not None:
             pass
         else:
             self.clear_items()
@@ -84,43 +78,42 @@ class Avatar(ui.ExitableView):
 class Profile(ui.ExitableView):
     name = "profile"
     
-    def __init__(self, context: Context, **kwargs):
-        super().__init__(context, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.member: utils.discord.Member = None
         self.user: utils.discord.User = None
         self.user_banner = None
     
-    async def get_data(self, *, member: utils.discord.Member):
+    async def init(self, *, member: utils.discord.Member):
         self.member = member
-        self.user = await self.bot.fetch_user(self.member.id)
-        return self.user
+        self.user = await self.client.fetch_user(self.member.id)
     
-    async def get_embed(self, user: utils.discord.User) -> utils.discord.Embed:
-        if user.banner is not None:
-            self.user_banner = user.banner.url
+    async def get_embed(self, *args) -> utils.discord.Embed:
+        if self.user.banner is not None:
+            self.user_banner = self.user.banner.url
         else:
-            path = f"resource/img/default_banner_{user.id}.png"
-            Image.new("RGB", (600, 240), user.colour.to_rgb()).save(path)
+            path = f"resource/img/default_banner_{self.user.id}.png"
+            Image.new("RGB", (600, 240), self.user.colour.to_rgb()).save(path)
             
             with open(path, "rb") as f:
                 self.user_banner = await utils.send_file_and_get_url(self.ctx.bot, utils.discord.File(fp=f))
             
             os.remove(path)
         
-        embed = utils.discord.Embed(colour=user.color, timestamp=utils.utcnow())
-        embed.set_author(name=self.translations.embed.author.format(user))
+        embed = utils.discord.Embed(colour=self.user.color, timestamp=utils.utcnow())
+        embed.set_author(name=self.translations.embed.author.format(self.user))
         embed.set_image(url=self.user_banner)
         embed.set_footer(text=self.translations.embed.footer.format(self.author.name), icon_url=self.author.avatar.url)
         return embed
     
-    @ui.button(label="Avatar", style=utils.discord.ButtonStyle.secondary)
     @ui.change_color_when_used
+    @ui.button(label="Avatar", style=utils.discord.ButtonStyle.secondary)
     async def avatar(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, translation):
         embed = AvatarEmbed(self.user, self.user.avatar, interaction.user, translation)
         await interaction.response.edit_message(embed=embed, view=self)
         
-    @ui.button(label="Banner", emoji="🖼️", style=utils.discord.ButtonStyle.secondary)
     @ui.change_color_when_used
+    @ui.button(label="Banner", emoji="🖼️", style=utils.discord.ButtonStyle.secondary)
     async def banner(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, translation):
         embed = utils.discord.Embed(colour=self.member.color, timestamp=utils.utcnow())
         embed.set_author(name=translation.embed.author.format(self.member), url=self.user_banner)
@@ -129,8 +122,8 @@ class Profile(ui.ExitableView):
 
         await interaction.response.edit_message(embed=embed, view=self)
         
-    @ui.button(label="Member Information", emoji="📑", style=utils.discord.ButtonStyle.secondary)
     @ui.change_color_when_used
+    @ui.button(label="Member Information", emoji="📑", style=utils.discord.ButtonStyle.secondary)
     async def information(self, interaction: utils.discord.Interaction, button: utils.discord.ui.Button, translation):
         embed = MemberInfoEmbed(self.member, self.author, translation)
         await interaction.response.edit_message(embed=embed, view=self)
@@ -158,12 +151,12 @@ class User(utils.Cog):
     @utils.commands.hybrid_command()
     async def profile(self, ctx: Context, member: Optional[utils.discord.Member] = None):
         member = member or ctx.author
-        await Profile(ctx, member=member).start()
+        await Profile(member=member).start(ctx)
     
     @utils.commands.hybrid_command()
     async def avatar(self, ctx: Context, member: Optional[utils.discord.Member] = None):
         member = member or ctx.author
-        await Avatar(ctx, member=member).start()
+        await Avatar(member=member).start(ctx)
     
     @utils.commands.hybrid_command()
     async def info(self, ctx: Context, member: Optional[utils.discord.Member] = None): 
